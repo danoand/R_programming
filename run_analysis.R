@@ -1,4 +1,8 @@
-print("Begin processing")
+print("TIDY: Begin processing.")
+
+# Require the 'plyr' package
+print("Loading required package: 'plyr'.")
+require("plyr")
 
 # Create working variables
 in_scope_col_num <- numeric()            # Vector to hold the feature number
@@ -21,6 +25,8 @@ create_tidy_folders <- function() {
     dir.create("tidy_work/test", showWarnings = FALSE)
     dir.create("tidy_work/train", showWarnings = FALSE)
     dir.create("tidy_output", showWarnings = FALSE)
+    
+    print("TIDY: Created working directories.")
 }
 
 ################################################################
@@ -48,6 +54,8 @@ add_subject_activity_data <- function(in_file_subject, in_file_activity, in_file
   
   # Save the result set data frame to disk as an R object
   saveRDS(tmp_process_df_resultset, file = tmp_process_filename)
+  
+  print("TIDY: Read observation data and assigned subject and activity codes.")
   
   # Return the path/filename to the calling statement
   tmp_process_filename
@@ -102,6 +110,8 @@ convert_activity_codes_to_text <- function(in_r_object) {
     # Write the data frame to disk as an R object - overwriting the inbound R object
     saveRDS(tmp_working_dataframe, file = in_r_object)
     
+    print("TIDY: Translated Activity codes to textual descriptions.")
+    
     # Return the object filename
     in_r_object
 }
@@ -145,6 +155,8 @@ merge_data_sets <- function(in_vector_r_objects) {
   
   # Remove R objects
   remove(tmp_build_merge_object, tmp_merge_list, tmp_interim_object)
+  
+  print("TIDY: Merged test and training datasets.")
   
   # Return the merged object filename
   tmp_merge_object_disk
@@ -194,6 +206,8 @@ identify_feature_list <- function(in_file) {
   in_scope_col_name <<- id_in_scope_col_name
   out_scope_col_num <<- id_out_scope_col_num
   
+  print("TIDY: Identify unwanted observations and add Activity descriptions as a data column.")
+  
   # Clean up by removing large objects from the environment
   remove(df_col_info, outapply)
 }
@@ -229,6 +243,8 @@ process_dataset <- function(in_r_object) {
   # Clean up by removing large objects from the environment
   remove(tmp_process_data_object)
   
+  print("TIDY: Remove extraneous observations.")
+  
   # Return the name of the output file (R object on disk)
   tmp_process_data_out_filename
 }
@@ -253,7 +269,9 @@ produce_tidy_dataset <- function(in_r_object, in_filename) {
     tmp_r_object_tidy_name = paste("tidy_work/", output_tidy_dataset, ".rds", sep="")
     saveRDS(tmp_produce_tidy_dataframe, file=tmp_r_object_tidy_name)
     
-    # 
+    print("TIDY: Generate a tidy data file representing the core data.")
+    
+    # Return the R object filename
     tmp_r_object_tidy_name
 }
 
@@ -262,14 +280,27 @@ produce_tidy_dataset_average <- function(in_r_object, in_filename) {
   tmp_produce_tidy_interim_dataframe <- readRDS(in_r_object)
   
   # Use the plyr function to calculate column means by the 'SubjectId' and 'Activity' factors
-  tmp_produce_tidy_average_dataframe <- ddply(tmp_produce_tidy_interim_dataframe, c('SubjectId', 'Activity'), function(x) colMeans(x[3:cnum(x)]))
+  tmp_produce_tidy_average_dataframe <- ddply(tmp_produce_tidy_interim_dataframe, c('SubjectId', 'Activity'), function(x) colMeans(x[3:ncol(x)]))
+  
+  # Get the column names
+  tmp_colnames <- colnames(tmp_produce_tidy_average_dataframe)
+  
+  # Update the column names to reflect an average (or mean) calculation 
+  for (i in 3:ncol(tmp_produce_tidy_average_dataframe)) {
+    tmp_colnames[i] <- paste("Avg:", tmp_colnames[i], sep=" ")
+  }
+  
+  # Set updated column names
+  colnames(tmp_produce_tidy_average_dataframe) <- tmp_colnames
   
   # Write the dataframe to the output folder
-  write.table(tmp_produce_tidy_average_dataframe, paste(output_folder, output_tidy_average_dataset, sep="/"))
+  write.table(tmp_produce_tidy_average_dataframe, paste(output_folder, output_tidy_average_dataset, sep="/"), row.names = FALSE)
   
   # Save the dataframe to disk as an R object
   tmp_r_object_dataset <- paste(output_tidy_average_dataset, ".rds", sep="")
   saveRDS(tmp_produce_tidy_average_dataframe, paste(work_folder, tmp_r_object_dataset, sep="/"))
+  
+  print("TIDY: Generate a tidy data file representing the average or mean of each core data variable.")
   
   # Return the r object filename
   tmp_r_object_dataset
@@ -306,4 +337,4 @@ out_tidy_dataset <- produce_tidy_dataset(processed_dataset_R_object)
 # Produce the tidy observation average dataset
 produce_tidy_dataset_average(out_tidy_dataset, output_tidy_average_dataset)
 
-print("End processing")
+print("TIDY: End processing.")
